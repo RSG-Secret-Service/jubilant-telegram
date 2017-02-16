@@ -1,0 +1,113 @@
+#!/bin/bash
+
+# How to use: ./script/dockerbuild <function (ex: build)> <build folder (ex: centos-7)>
+# or for the default "build" function: ./script/dockerbuild <build folder (ex: centos-7)>
+
+# Please don't edit me! I'm used by the CI to do important stuff!
+
+# Looking to change the functions below for your docker repo? Overwrite them in script/dockerconfig!
+
+populateTemplate() {
+    echo "Creating Dockerfile in $targetDir"
+    initializeTemplate
+    echo "" >> Dockerfile
+    echo "LABEL com.rsglab.build.gitrepo='$GIT_REPO' \\" >> Dockerfile
+    echo "      com.rsglab.build.gitsha='$BUILD_SHA' \\" >> Dockerfile
+    echo "      com.rsglab.build.timestamp='$BUILD_TIMESTAMP' \\" >> Dockerfile
+    echo "      com.rsglab.build.user='$BUILD_USER' \\" >> Dockerfile
+    echo "      com.rsglab.build.dependency='$PARENT_IMAGE:$PARENT_IMAGE_TAG'" >> Dockerfile
+}
+
+initializeTemplate() {
+    sed \
+        -e "s,@@PARENTIMAGE@@,$PARENT_IMAGE,g" \
+        -e "s,@@PARENTIMAGEVERSION@@,$PARENT_IMAGE_TAG,g" \
+        Dockerfile.tmpl > Dockerfile
+}
+
+build() {
+    populateTemplate
+    echo "Building $DOCKER_IMAGE"
+    docker build -t "$DOCKER_IMAGE" .
+}
+
+release() {
+    if [[ -z "$BUILD_NUMBER" ]]; then
+        echo "Please don't push images locally. Rely on the CI!"
+    else
+        docker push "$DOCKER_IMAGE"
+    fi
+}
+
+clean() {
+    (docker rmi $(docker images | grep "$DOCKER_RM_STRING" | awk "{print \$3}") || true)
+}
+
+getImageName() {
+    echo "$DOCKER_IMAGE"
+}
+
+getUnversionedImageName() {
+    echo "$UNVERSIONED_IMAGE"
+}
+
+getTag(){
+    echo "$DOCKER_BUILD_TAG"
+}
+
+fullRelease() {
+    build
+    release
+    clean
+}
+
+# Looking to change the functions above? Overwrite them in script/dockerconfig!
+
+# If only only parameter, use that as the target, and the command is build. Otherwise, first parameter is the command, second is the target
+if [ -z "$2" ]; then
+    targetDir="$1"
+    targetFunc="build"
+else
+    targetDir="$2"
+    targetFunc="$1" 
+fi
+cd "$targetDir"
+
+source script/dockerconfig
+
+
+if [ -z "$BUILD_TIMESTAMP" ]; then
+    BUILD_TIMESTAMP=$(date +%s)
+fi
+
+BUILD_USER=$(whoami)
+
+BUILD_SHA=$(git rev-parse --short HEAD)
+
+# Jenkins will set this variable if it's a jenkins build.
+if [[ -z "$BUILD_NUMBER" ]]; then
+    DOCKER_BUILD_TAG="$IMAGE_TAG-local"
+else
+    DOCKER_BUILD_TAG="$IMAGE_TAG-$BUILD_NUMBER"
+fi
+
+if [[ -z "$GIT_REPO" ]]; then
+    echo "This script requires the GIT_REPO variable to be set in your dockerconfig file. Please do so and make sure that it matches your project's GH url. This will be used in keeping your parent image up to date."
+    exit 1
+fi
+
+if [[ -z "$PARENT_IMAGE" ]]; then
+    echo "This script requires the PARENT_IMAGE variable to be set in your dockerconfig file. This will be used in keeping your parent image up to date."
+    exit 1
+fi
+
+if [[ -z "$PARENT_IMAGE_TAG" ]]; then
+    echo "This script requires the PARENT_IMAGE_TAG variable to be set in your dockerconfig file. This will be used in keeping your parent image up to date."
+    exit 1
+fi
+
+UNVERSIONED_IMAGE="$NAMESPACE/$IMAGE_NAME"
+DOCKER_IMAGE="$OUR_REGISTRY/$NAMESPACE/$IMAGE_NAME:$DOCKER_BUILD_TAG"
+DOCKER_RM_STRING="$OUR_REGISTRY/$NAMESPACE/$IMAGE_NAME"
+# Run command
+"$targetFunc"
