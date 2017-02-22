@@ -7,6 +7,8 @@
 
 # Looking to change the functions below for your docker repo? Overwrite them in script/dockerconfig!
 
+set -e
+
 populateTemplate() {
     echo "Creating Dockerfile in $targetDir"
     initializeTemplate
