@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # How to use: ./script/dockerbuild <function (ex: build)> <build folder (ex: centos-7)>
 # or for the default "build" function: ./script/dockerbuild <build folder (ex: centos-7)>
