@@ -75,8 +75,27 @@ else
 fi
 cd "$targetDir"
 
-source script/dockerconfig
+# Load our current env variables into a variable. This is so that we preserve our env after loading the config files
+quotedEnvironmentVars=""
+for var in $(printenv); do 
+    quotedVar="$(echo $var | sed -e 's@\(.*\)=\(.*\)@export \1=\"\2\"@g')"
+    quotedEnvironmentVars=$(echo -e "$quotedEnvironmentVars\n$quotedVar")
+done
 
+#  Loading the script files for our docker image
+if [ -f script/dockerconfig ]; then
+    source script/dockerconfig
+else
+    if [ -f Dockerconfig ]; then
+        source Dockerconfig
+    else
+        echo "Need either a script/dockerconfig file, or a Dockerconfig file"
+        exit 1
+    fi
+fi
+
+# Reload our old environment vars
+eval "$quotedEnvironmentVars"
 
 if [ -z "$BUILD_TIMESTAMP" ]; then
     BUILD_TIMESTAMP=$(date +%s)
@@ -105,6 +124,16 @@ fi
 
 if [[ -z "$PARENT_IMAGE_TAG" ]]; then
     echo "This script requires the PARENT_IMAGE_TAG variable to be set in your dockerconfig file. This will be used in keeping your parent image up to date."
+    exit 1
+fi
+
+if [[ -z "$IMAGE_NAME" ]]; then
+    echo "This script requires the IMAGE_NAME variable to be set in your dockerconfig file."
+    exit 1
+fi
+
+if [[ -z "$IMAGE_TAG" ]]; then
+    echo "This script requires the IMAGE_TAG variable to be set in your dockerconfig file."
     exit 1
 fi
 
