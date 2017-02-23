@@ -94,9 +94,6 @@ else
     fi
 fi
 
-# Reload our old environment vars
-eval "$quotedEnvironmentVars"
-
 if [ -z "$BUILD_TIMESTAMP" ]; then
     BUILD_TIMESTAMP=$(date +%s)
 fi
@@ -108,6 +105,8 @@ BUILD_SHA=$(git rev-parse --short HEAD)
 # Jenkins will set this variable if it's a jenkins build.
 if [[ -z "$BUILD_NUMBER" ]]; then
     DOCKER_BUILD_TAG="$IMAGE_TAG-local"
+    # Reload our old environment vars
+    eval "$quotedEnvironmentVars"
 else
     DOCKER_BUILD_TAG="$IMAGE_TAG-$BUILD_NUMBER"
 fi
