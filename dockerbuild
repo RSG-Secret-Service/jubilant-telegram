@@ -76,11 +76,11 @@ fi
 cd "$targetDir"
 
 # Load our current env variables into a variable. This is so that we preserve our env after loading the config files
-quotedEnvironmentVars=""
-for var in $(printenv); do 
-    quotedVar="$(echo $var | sed -e 's@\(.*\)=\(.*\)@export \1=\"\2\"@g')"
-    quotedEnvironmentVars=$(echo -e "$quotedEnvironmentVars\n$quotedVar")
-done
+#quotedEnvironmentVars=""
+#for var in $(printenv); do 
+#    quotedVar="$(echo $var | sed -e 's@\(.*\)=\(.*\)@export \1=\"\2\"@g')"
+#    quotedEnvironmentVars=$(echo -e "$quotedEnvironmentVars\n$quotedVar")
+#done
 
 #  Loading the script files for our docker image
 if [ -f script/dockerconfig ]; then
@@ -106,7 +106,7 @@ BUILD_SHA=$(git rev-parse --short HEAD)
 if [[ -z "$BUILD_NUMBER" ]]; then
     DOCKER_BUILD_TAG="$IMAGE_TAG-local"
     # Reload our old environment vars
-    eval "$quotedEnvironmentVars"
+    #eval "$quotedEnvironmentVars"
 else
     DOCKER_BUILD_TAG="$IMAGE_TAG-$BUILD_NUMBER"
 fi
